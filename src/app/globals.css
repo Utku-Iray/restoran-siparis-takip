@@ -24,3 +24,29 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Temel metin stilleri */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #171717;
+}
+
+p {
+  color: #171717;
+}
+
+/* Hero section için özel stiller */
+.hero-section {
+  color: white;
+  background: linear-gradient(to right, #4F46E5, #7C3AED);
+  padding: 5rem 0;
+}
+
+.hero-section h1,
+.hero-section p {
+  color: white !important;
+}

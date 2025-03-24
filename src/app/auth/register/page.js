@@ -1,31 +1,39 @@
-'use client';
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 
-export default function LoginPage() {
-    const [userType, setUserType] = useState('customer'); // customer, restaurant, admin
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+export default function RegisterPage() {
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        userType: "customer" // customer, restaurant
+    });
     const [errorMessage, setErrorMessage] = useState("");
-
     const router = useRouter();
 
-    const handleLogin = async (e) => {
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!email || !password) {
-            setErrorMessage("Email ve şifre gereklidir.");
+        if (formData.password !== formData.confirmPassword) {
+            setErrorMessage("Şifreler eşleşmiyor");
             return;
         }
 
-        if (email === "user@example.com" && password === "password123") {
-            router.push("/orders");
-        } else {
-            setErrorMessage("Geçersiz kullanıcı bilgileri.");
-        }
+        // API entegrasyonu buraya gelecek
+        console.log("Kayıt verileri:", formData);
+        router.push("/auth/login");
     };
 
     return (
@@ -33,23 +41,56 @@ export default function LoginPage() {
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="w-24 h-24 mx-auto bg-pink-500 rounded-full flex items-center justify-center">
                     <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                    Hesabınıza Giriş Yapın
+                    Yeni Hesap Oluştur
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                    Veya{' '}
-                    <Link href="/auth/register" className="font-medium text-pink-600 hover:text-pink-500">
-                        yeni hesap oluşturun
+                    Zaten hesabınız var mı?{' '}
+                    <Link href="/auth/login" className="font-medium text-pink-600 hover:text-pink-500">
+                        Giriş yapın
                     </Link>
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-                    <form className="space-y-6" onSubmit={handleLogin}>
+                    <form className="space-y-6" onSubmit={handleSubmit}>
+                        <div>
+                            <label htmlFor="userType" className="block text-sm font-medium text-gray-700">
+                                Hesap Türü
+                            </label>
+                            <select
+                                id="userType"
+                                name="userType"
+                                value={formData.userType}
+                                onChange={handleChange}
+                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"
+                            >
+                                <option value="customer">Müşteri</option>
+                                <option value="restaurant">Restoran</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                Ad Soyad
+                            </label>
+                            <div className="mt-1">
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    required
+                                    value={formData.name}
+                                    onChange={handleChange}
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                 E-posta adresi
@@ -61,8 +102,8 @@ export default function LoginPage() {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    value={formData.email}
+                                    onChange={handleChange}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500"
                                 />
                             </div>
@@ -77,41 +118,43 @@ export default function LoginPage() {
                                     id="password"
                                     name="password"
                                     type="password"
-                                    autoComplete="current-password"
                                     required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    value={formData.password}
+                                    onChange={handleChange}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
+                        <div>
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                                Şifre Tekrar
+                            </label>
+                            <div className="mt-1">
                                 <input
-                                    id="remember-me"
-                                    name="remember-me"
-                                    type="checkbox"
-                                    className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                                    id="confirmPassword"
+                                    name="confirmPassword"
+                                    type="password"
+                                    required
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500"
                                 />
-                                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                    Beni hatırla
-                                </label>
-                            </div>
-
-                            <div className="text-sm">
-                                <Link href="/auth/forgot-password" className="font-medium text-pink-600 hover:text-pink-500">
-                                    Şifremi unuttum
-                                </Link>
                             </div>
                         </div>
+
+                        {errorMessage && (
+                            <div className="text-red-600 text-sm">
+                                {errorMessage}
+                            </div>
+                        )}
 
                         <div>
                             <button
                                 type="submit"
                                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
                             >
-                                Giriş Yap
+                                Kayıt Ol
                             </button>
                         </div>
                     </form>
@@ -122,7 +165,7 @@ export default function LoginPage() {
                                 <div className="w-full border-t border-gray-300" />
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">Veya şununla devam edin</span>
+                                <span className="px-2 bg-white text-gray-500">Veya şununla kayıt olun</span>
                             </div>
                         </div>
 
@@ -152,4 +195,4 @@ export default function LoginPage() {
             </div>
         </div>
     );
-}
+} 

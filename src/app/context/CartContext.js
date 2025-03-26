@@ -1,11 +1,24 @@
 'use client'
 
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const CartContext = createContext()
 
 export function CartProvider({ children }) {
     const [items, setItems] = useState([])
+
+    // Sayfa yüklendiğinde localStorage'dan sepeti yükle
+    useEffect(() => {
+        const savedCart = localStorage.getItem('cart')
+        if (savedCart) {
+            setItems(JSON.parse(savedCart))
+        }
+    }, [])
+
+    // Sepet değiştiğinde localStorage'a kaydet
+    useEffect(() => {
+        localStorage.setItem('cart', JSON.stringify(items))
+    }, [items])
 
     const addToCart = (item) => {
         setItems((prevItems) => {
@@ -33,12 +46,12 @@ export function CartProvider({ children }) {
 
     const clearCart = () => {
         setItems([])
+        localStorage.removeItem('cart')
     }
 
-    const total = items.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-    )
+    const total = items?.length > 0
+        ? items.reduce((sum, item) => sum + (item?.price || 0) * (item?.quantity || 0), 0)
+        : 0
 
     return (
         <CartContext.Provider

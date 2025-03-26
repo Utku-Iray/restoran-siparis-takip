@@ -1,33 +1,73 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { menuItemService } from './services/menuItemService'
 
-const popularItems = [
+// Örnek popüler ürünler (API'den çekilecek veriler hazır olunca kaldırılabilir)
+const samplePopularItems = [
   {
     id: 1,
     name: 'Klasik Burger',
     description: 'Dana eti, cheddar peyniri, marul, domates',
     price: 150,
-    image: '/burger.jpg'
+    imageUrl: '/burger.jpg'
   },
   {
     id: 2,
     name: 'Margherita Pizza',
     description: 'Domates sosu, mozarella peyniri, fesleğen',
     price: 120,
-    image: '/pizza.jpg'
+    imageUrl: '/pizza.jpg'
   },
   {
     id: 3,
     name: 'Tavuk Şiş',
     description: 'Marine edilmiş tavuk, közlenmiş sebzeler',
     price: 90,
-    image: '/tavuk.jpg'
+    imageUrl: '/tavuk.jpg'
   }
 ]
 
 export default function Home() {
+  const [popularItems, setPopularItems] = useState(samplePopularItems);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadPopularItems();
+  }, []);
+
+  const loadPopularItems = async () => {
+    try {
+      setLoading(true);
+      console.log("Ana sayfada popüler ürünler yükleniyor...");
+
+      // Tüm menü öğelerini çek
+      const allItems = await menuItemService.getAllMenuItems();
+
+      if (allItems && allItems.length > 0) {
+        // En fazla 6 popüler ürün göster (gerçek uygulamada burada filtreleme yapılabilir)
+        const items = allItems.slice(0, 6);
+        console.log(`${items.length} popüler ürün yüklendi`);
+        setPopularItems(items);
+      } else {
+        // Eğer API'den veri gelmezse örnek verileri kullan
+        console.log("API'den veri alınamadı, örnek veriler kullanılıyor");
+        setPopularItems(samplePopularItems);
+      }
+
+      setError(null);
+    } catch (err) {
+      console.error("Popüler ürünler yüklenirken hata:", err);
+      setError("Ürünler yüklenirken bir hata oluştu");
+      // Hata durumunda örnek verileri göster
+      setPopularItems(samplePopularItems);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
@@ -45,10 +85,10 @@ export default function Home() {
               En sevdiğiniz yemekleri online sipariş edin, sıcak sıcak teslim alalım
             </p>
             <Link
-              href="/menu"
+              href="/restaurant"
               className="inline-block bg-pink-500 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-pink-600 transition duration-300 transform hover:scale-105"
             >
-              Menüyü İncele
+              Restoranları İncele
             </Link>
           </div>
         </div>
@@ -103,15 +143,17 @@ export default function Home() {
             {popularItems.map((item) => (
               <div key={item.id} className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition duration-300">
                 <div className="h-48 bg-gray-200 relative">
-                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
+                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${item.imageUrl || item.image || '/default-food.jpg'})` }} />
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                  <p className="text-gray-600 mb-4">{item.description}</p>
+                  <p className="text-gray-600 mb-4">{item.description || 'Lezzetli yemek, detaylar için tıklayın.'}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-pink-500">{item.price} ₺</span>
+                    <span className="text-2xl font-bold text-pink-500">
+                      {typeof item.price === 'number' ? item.price.toFixed(2) : item.price} ₺
+                    </span>
                     <Link
-                      href="/menu"
+                      href="/restaurant"
                       className="bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800"
                     >
                       Sipariş Ver
@@ -123,10 +165,10 @@ export default function Home() {
           </div>
           <div className="text-center mt-12">
             <Link
-              href="/menu"
+              href="/restaurant"
               className="inline-block border-2 border-gray-900 text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-gray-900 hover:text-white transition duration-300"
             >
-              Tüm Menüyü Gör
+              Tüm Restoranları Gör
             </Link>
           </div>
         </div>
@@ -142,7 +184,7 @@ export default function Home() {
             İlk siparişinize özel %15 indirim fırsatını kaçırmayın.
           </p>
           <Link
-            href="/menu"
+            href="/restaurant"
             className="inline-block bg-white text-pink-500 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-pink-50 transition duration-300"
           >
             Sipariş Ver

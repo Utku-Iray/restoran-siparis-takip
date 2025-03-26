@@ -1,14 +1,12 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Link from 'next/link'
-import { AuthProvider } from './context/AuthContext'
-import { CartProvider } from './context/CartContext'
+import Providers from './providers';
 
 const inter = Inter({
   subsets: ["latin"],
   display: 'swap',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
 });
 
 export const metadata = {
@@ -18,17 +16,9 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr">
-      <body
-        className={`${inter.className} antialiased text-gray-900`}
-      >
-        <AuthProvider>
-          <CartProvider>
-            <Header />
-            <main className="bg-white min-h-screen w-full">{children}</main>
-            <Footer />
-          </CartProvider>
-        </AuthProvider>
+    <html lang="tr" className={inter.variable}>
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCart } from '../context/CartContext'
+import { menuItemService } from '../services/menuItemService'
 
-// Örnek veri - Backend entegrasyonunda değiştirilecek
-const SAMPLE_CATEGORIES = [
+const CATEGORIES = [
     "Tümü",
     "Ana Yemekler",
     "Çorbalar",
@@ -13,30 +13,70 @@ const SAMPLE_CATEGORIES = [
     "Tatlılar"
 ];
 
-const SAMPLE_MENU_ITEMS = [
-    {
-        id: 1,
-        name: "Köfte",
-        description: "Izgara köfte, yanında pilav ve salata ile",
-        price: 120,
-        category: "Ana Yemekler",
-        image: "/images/kofte.jpg",
-        preparationTime: "20 dk",
-        calories: "450 kcal"
-    },
-    // Diğer örnek ürünler backend entegrasyonunda eklenecek
-];
-
 export default function MenuPage() {
     const [selectedCategory, setSelectedCategory] = useState("Tümü");
     const [searchQuery, setSearchQuery] = useState("");
+    const [menuItems, setMenuItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const { addToCart } = useCart();
 
-    const filteredItems = SAMPLE_MENU_ITEMS.filter(item => {
+    useEffect(() => {
+        loadMenuItems();
+    }, []);
+
+    const loadMenuItems = async () => {
+        try {
+            setLoading(true);
+            console.log("Müşteri menü sayfasında tüm menü öğeleri yükleniyor...");
+
+            // menuItemService ile tüm menü öğelerini al
+            const items = await menuItemService.getAllMenuItems();
+            console.log(`Toplam ${items.length} menü öğesi yüklendi`);
+            setMenuItems(items);
+
+            // Restoran bilgilerini localStorage'a kaydet
+            if (items.length > 0) {
+                const restaurantId = items[0].restaurantId;
+                const restaurantName = items[0].restaurantName || 'Restoran';
+                localStorage.setItem('restaurantId', restaurantId);
+                localStorage.setItem('restaurantName', restaurantName);
+                console.log(`Restoran bilgileri kaydedildi. ID: ${restaurantId}, Ad: ${restaurantName}`);
+            }
+
+            setError(null);
+        } catch (err) {
+            console.error('Menü yüklenirken hata:', err);
+            setError('Menü yüklenirken bir hata oluştu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredItems = menuItems.filter(item => {
         const matchesCategory = selectedCategory === "Tümü" || item.category === selectedCategory;
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
     });
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Hata!</strong>
+                    <span className="block sm:inline"> {error}</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
@@ -59,7 +99,7 @@ export default function MenuPage() {
                         />
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2 w-full sm:w-auto">
-                        {SAMPLE_CATEGORIES.map((category) => (
+                        {CATEGORIES.map((category) => (
                             <button
                                 key={category}
                                 onClick={() => setSelectedCategory(category)}
@@ -81,27 +121,32 @@ export default function MenuPage() {
                         <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                             <div className="relative h-48">
                                 <img
-                                    src={item.image}
+                                    src={item.imageUrl || item.image || '/images/default-food.jpg'}
                                     alt={item.name}
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-medium text-gray-600">
-                                    {item.preparationTime}
+                                    {item.preparationTime || '15-20 dk'}
                                 </div>
                             </div>
                             <div className="p-4">
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                                    <span className="text-lg font-bold text-pink-600">{item.price} ₺</span>
+                                    <span className="text-lg font-bold text-pink-600">
+                                        {typeof item.price === 'number' ? item.price.toFixed(2) : item.price} ₺
+                                    </span>
                                 </div>
-                                <p className="text-gray-600 text-sm mb-4">{item.description}</p>
+                                <p className="text-gray-600 text-sm mb-4">
+                                    {item.description || 'Lezzetli yemek, detaylar için tıklayın.'}
+                                </p>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">{item.calories}</span>
+                                    <span className="text-sm text-gray-500">{item.category || 'Diğer'}</span>
                                     <button
                                         onClick={() => addToCart(item)}
-                                        className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                                        className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 transition-colors"
+                                        disabled={item.isAvailable === false}
                                     >
-                                        Sepete Ekle
+                                        {item.isAvailable === false ? 'Tükendi' : 'Sepete Ekle'}
                                     </button>
                                 </div>
                             </div>

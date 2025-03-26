@@ -5,11 +5,42 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --text-primary: #171717;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
 }
 
 @layer base {
   body {
     @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
+  }
+
+  /* Form elemanları için */
+  input,
+  textarea,
+  select {
+    @apply text-gray-900 !important;
+    background-color: white !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-gray-500;
+  }
+
+  /* Footer başlıkları için */
+  footer h1,
+  footer h2,
+  footer h3,
+  footer h4,
+  footer h5,
+  footer h6 {
+    @apply text-primary dark:text-white;
+  }
+
+  /* Footer linkleri için */
+  footer a {
+    @apply text-secondary hover:text-primary dark:text-gray-300 dark:hover:text-white;
   }
 }
 
@@ -24,6 +55,9 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --text-primary: #ffffff;
+    --text-secondary: #D1D5DB;
+    --text-muted: #9CA3AF;
   }
 }
 
@@ -40,11 +74,17 @@ h3,
 h4,
 h5,
 h6 {
-  color: #171717;
+  color: var(--text-primary);
 }
 
 p {
-  color: #171717;
+  color: var(--text-primary);
+}
+
+/* Logo ve diğer özel metinler için */
+.logo-text,
+.brand-text {
+  color: var(--text-primary);
 }
 
 /* Hero section için özel stiller */

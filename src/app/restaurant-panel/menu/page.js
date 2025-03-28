@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { menuItemService } from '../../services/menuItemService';
+import { fixImageUrl, prepareImageForDB } from '../../services/axiosConfig';
 
 export default function MenuPage() {
     const { user, loading } = useAuth();
@@ -29,7 +30,6 @@ export default function MenuPage() {
         }
 
         if (user && user.restaurantId) {
-            // kullanıcının restaurantId'sini localStorage'a kaydedelim
             localStorage.setItem('restaurantId', user.restaurantId);
             console.log("useEffect: restaurantId localStorage'a kaydedildi:", user.restaurantId);
         }
@@ -48,30 +48,24 @@ export default function MenuPage() {
 
             console.log("loadMenuItems çalıştırılıyor, kullanıcı:", user);
 
-            // restaurantId için birden fazla kaynağı kontrol et
             let restaurantId = null;
 
-            // 1. Kaynak: user nesnesinden
             if (user && user.restaurantId) {
                 restaurantId = user.restaurantId;
                 console.log("restaurantId user nesnesinden alındı:", restaurantId);
             }
-            // 2. Kaynak: user.id değerinden (bazı API'ler bunu kullanıyor olabilir)
             else if (user && user.id) {
                 restaurantId = user.id;
                 console.log("restaurantId user.id'den alındı:", restaurantId);
             }
-            // 3. Kaynak: localStorage'dan
             else {
                 restaurantId = localStorage.getItem('restaurantId');
                 console.log("restaurantId localStorage'dan alındı:", restaurantId);
             }
 
-            // restaurantId hala bulunamadıysa
             if (!restaurantId) {
                 console.warn("restaurantId hiçbir kaynaktan bulunamadı, filtresiz yükleniyor");
 
-                // restaurantId olmadığında tüm öğeleri al
                 try {
                     const items = await menuItemService.getAllMenuItems();
                     setMenuItems(items);
@@ -81,7 +75,6 @@ export default function MenuPage() {
                     setMenuItems([]);
                 }
             } else {
-                // RestaurantId bulundu, şimdi menü öğelerini yükle
                 console.log(`restaurantId=${restaurantId} ile menü öğeleri getiriliyor`);
 
                 try {
@@ -89,7 +82,6 @@ export default function MenuPage() {
                     console.log("Menü öğeleri restaurantId ile yüklendi:", items.length);
                     setMenuItems(items);
 
-                    // Elde edilen restaurantId'yi localStorage'a kaydet (geleceği garantiye almak için)
                     if (typeof window !== 'undefined') {
                         localStorage.setItem('restaurantId', restaurantId);
                         console.log("restaurantId localStorage'a kaydedildi:", restaurantId);
@@ -118,31 +110,38 @@ export default function MenuPage() {
     const handleImageChange = (e) => {
         const { files } = e.target;
         if (files && files[0]) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setFormData((prev) => ({
-                    ...prev,
-                    imageUrl: event.target.result
-                }));
-            };
-            reader.readAsDataURL(files[0]);
+            const file = files[0];
+            console.log('Seçilen dosya:', file.name, 'boyut:', (file.size / 1024).toFixed(2), 'KB');
+
+            if (file.size > 5 * 1024 * 1024) {
+                setError('Dosya boyutu 5MB\'dan küçük olmalıdır.');
+                return;
+            }
+
+            const fileName = file.name.toLowerCase();
+            const imageUrl = `/image/${fileName}`;
+
+            setFormData(prev => ({
+                ...prev,
+                imageUrl: imageUrl
+            }));
+
+            console.log('ImageUrl ayarlandı:', imageUrl);
         }
     };
 
     const openModal = (item = null) => {
         if (item) {
-            // Mevcut öğeyi düzenlemek için
             setCurrentItem(item);
             setFormData({
                 name: item.name || '',
                 price: item.price ? item.price.toString() : '',
                 description: item.description || '',
                 category: item.category || '',
-                imageUrl: item.imageUrl || '',
+                imageUrl: item.imageurl || item.imageUrl || '',
                 isAvailable: item.isAvailable !== false
             });
         } else {
-            // Yeni öğe eklemek için
             setCurrentItem(null);
             setFormData({
                 name: '',
@@ -165,20 +164,21 @@ export default function MenuPage() {
         e.preventDefault();
 
         try {
-            // Tüm restaurantId kaynaklarını kontrol et
+            if (!formData.name || !formData.price || !formData.category) {
+                setError('Lütfen zorunlu alanları doldurun (Ürün Adı, Fiyat, Kategori)');
+                return;
+            }
+
             let restaurantId = null;
 
-            // 1. Kaynak: user.restaurantId (öncelikli)
             if (user && user.restaurantId) {
                 restaurantId = user.restaurantId;
                 console.log('handleSubmit: restaurantId user.restaurantId değerinden alındı:', restaurantId);
             }
-            // 2. Kaynak: user.id (bazı API'ler id'yi kullanıyor)
             else if (user && user.id) {
                 restaurantId = user.id;
                 console.log('handleSubmit: restaurantId user.id değerinden alındı:', restaurantId);
             }
-            // 3. Kaynak: localStorage
             else {
                 restaurantId = localStorage.getItem('restaurantId');
                 console.log('handleSubmit: restaurantId localStorage\'dan alındı:', restaurantId);
@@ -190,11 +190,14 @@ export default function MenuPage() {
                 return;
             }
 
-            // Fiyatı sayıya çevir
+            const imageUrl = prepareImageForDB(formData.imageUrl);
+            console.log('Backend için hazırlanan imageUrl:', imageUrl);
+
             const itemData = {
                 ...formData,
                 price: parseFloat(formData.price),
-                restaurantId: restaurantId
+                restaurantId: restaurantId,
+                imageUrl: imageUrl
             };
 
             console.log('Gönderilecek veri:', itemData);
@@ -293,36 +296,10 @@ export default function MenuPage() {
         }
     };
 
-    // Tüm verileri sıfırlama ve örnek veri yükleme fonksiyonu
-    const resetAllData = async () => {
-        try {
-            setError(null);
-            setSuccess('');
-
-            // Onay iste
-            if (!window.confirm('Tüm verileri sıfırlamak istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-                return;
-            }
-
-            // Tüm verileri sıfırla
-            await menuItemService.resetAllData();
-
-            setSuccess('Tüm veriler sıfırlandı ve örnek veri yüklendi! Sayfa yenileniyor...');
-
-            // 1.5 saniye sonra sayfayı yenile
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } catch (error) {
-            console.error('Veriler sıfırlanırken hata:', error);
-            setError('Veriler sıfırlanırken bir hata oluştu');
-        }
-    };
-
     if (loading || isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
             </div>
         );
     }
@@ -338,7 +315,7 @@ export default function MenuPage() {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-100 py-8">
+        <div className="min-h-screen bg-gray-100 pt-36">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="bg-white shadow rounded-lg p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -352,7 +329,7 @@ export default function MenuPage() {
                             </button>
                             <button
                                 onClick={() => openModal()}
-                                className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700"
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                             >
                                 Yeni Ürün Ekle
                             </button>
@@ -369,21 +346,6 @@ export default function MenuPage() {
                                 Önbelleği Temizle
                                 <span className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
                                     Menü verilerindeki sorunları giderir
-                                </span>
-                            </button>
-                            <button
-                                onClick={resetAllData}
-                                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors duration-200 flex items-center text-sm relative group"
-                                title="Tüm verileri sıfırlar ve örnek veri yükler"
-                            >
-                                <span className="mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </span>
-                                Verileri Sıfırla
-                                <span className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                                    Dikkat: Mevcut tüm menü verilerini silip örnek veri ekler
                                 </span>
                             </button>
                         </div>
@@ -408,7 +370,7 @@ export default function MenuPage() {
                             <p className="text-gray-500 mb-4">Henüz menünüzde ürün bulunmuyor.</p>
                             <button
                                 onClick={() => openModal()}
-                                className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700"
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                             >
                                 İlk Ürünü Ekle
                             </button>
@@ -421,19 +383,23 @@ export default function MenuPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {items.map(item => (
                                             <div key={item.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                                                {item.imageUrl && (
+                                                {(item.imageurl || item.imageUrl) && (
                                                     <div className="h-48 overflow-hidden">
                                                         <img
-                                                            src={item.imageUrl}
+                                                            src={fixImageUrl(item.imageurl || item.imageUrl)}
                                                             alt={item.name}
                                                             className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = '/image/default-food.jpg';
+                                                            }}
                                                         />
                                                     </div>
                                                 )}
                                                 <div className="p-4">
                                                     <div className="flex justify-between items-start">
                                                         <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                                                        <span className="font-semibold text-pink-600">
+                                                        <span className="font-semibold text-red-600">
                                                             {typeof item.price === 'number'
                                                                 ? item.price.toFixed(2)
                                                                 : item.price} TL
@@ -505,7 +471,7 @@ export default function MenuPage() {
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 />
                             </div>
 
@@ -522,7 +488,7 @@ export default function MenuPage() {
                                     required
                                     min="0"
                                     step="0.01"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 />
                             </div>
 
@@ -537,7 +503,7 @@ export default function MenuPage() {
                                     value={formData.category}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 />
                             </div>
 
@@ -551,7 +517,7 @@ export default function MenuPage() {
                                     value={formData.description}
                                     onChange={handleChange}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 />
                             </div>
 
@@ -562,9 +528,13 @@ export default function MenuPage() {
                                 {formData.imageUrl && (
                                     <div className="mb-2">
                                         <img
-                                            src={formData.imageUrl}
+                                            src={fixImageUrl(formData.imageUrl)}
                                             alt="Ürün Görseli"
                                             className="h-48 w-full object-cover rounded-md"
+                                            onError={(e) => {
+                                                e.target.onerror = null;
+                                                e.target.src = '/image/default-food.jpg';
+                                            }}
                                         />
                                     </div>
                                 )}
@@ -574,7 +544,7 @@ export default function MenuPage() {
                                     name="imageFile"
                                     accept="image/*"
                                     onChange={handleImageChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                 />
                             </div>
 
@@ -585,7 +555,7 @@ export default function MenuPage() {
                                     name="isAvailable"
                                     checked={formData.isAvailable}
                                     onChange={handleChange}
-                                    className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                                 />
                                 <label htmlFor="isAvailable" className="ml-2 block text-sm text-gray-900">
                                     Ürün mevcut mu?
@@ -602,7 +572,7 @@ export default function MenuPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700"
+                                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                                 >
                                     {currentItem ? 'Güncelle' : 'Ekle'}
                                 </button>

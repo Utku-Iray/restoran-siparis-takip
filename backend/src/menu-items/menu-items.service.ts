@@ -9,9 +9,9 @@ export class MenuItemsService {
     constructor(
         @InjectRepository(MenuItem)
         private menuItemRepository: Repository<MenuItem>,
-    ) {}
+    ) { }
 
-    async create(createMenuItemDto: CreateMenuItemDto, restaurantId: string): Promise<MenuItem> {
+    async create(createMenuItemDto: CreateMenuItemDto, restaurantId: number): Promise<MenuItem> {
         const menuItem = this.menuItemRepository.create({
             ...createMenuItemDto,
             restaurantId,
@@ -19,14 +19,20 @@ export class MenuItemsService {
         return await this.menuItemRepository.save(menuItem);
     }
 
-    async findAll(restaurantId: string): Promise<MenuItem[]> {
+    async findAll(restaurantId: number): Promise<MenuItem[]> {
         return await this.menuItemRepository.find({
             where: { restaurantId },
             order: { category: 'ASC', name: 'ASC' },
         });
     }
 
-    async findOne(id: string, restaurantId: string): Promise<MenuItem> {
+    async findAllPublic(): Promise<MenuItem[]> {
+        return await this.menuItemRepository.find({
+            order: { restaurantId: 'ASC', category: 'ASC', name: 'ASC' },
+        });
+    }
+
+    async findOne(id: number, restaurantId: number): Promise<MenuItem> {
         const menuItem = await this.menuItemRepository.findOne({
             where: { id, restaurantId },
         });
@@ -36,18 +42,28 @@ export class MenuItemsService {
         return menuItem;
     }
 
-    async update(id: string, updateData: Partial<CreateMenuItemDto>, restaurantId: string): Promise<MenuItem> {
+    async findOnePublic(id: number): Promise<MenuItem> {
+        const menuItem = await this.menuItemRepository.findOne({
+            where: { id },
+        });
+        if (!menuItem) {
+            throw new NotFoundException('Menü öğesi bulunamadı');
+        }
+        return menuItem;
+    }
+
+    async update(id: number, updateData: Partial<CreateMenuItemDto>, restaurantId: number): Promise<MenuItem> {
         const menuItem = await this.findOne(id, restaurantId);
         Object.assign(menuItem, updateData);
         return await this.menuItemRepository.save(menuItem);
     }
 
-    async remove(id: string, restaurantId: string): Promise<void> {
+    async remove(id: number, restaurantId: number): Promise<void> {
         const menuItem = await this.findOne(id, restaurantId);
         await this.menuItemRepository.remove(menuItem);
     }
 
-    async toggleAvailability(id: string, restaurantId: string): Promise<MenuItem> {
+    async toggleAvailability(id: number, restaurantId: number): Promise<MenuItem> {
         const menuItem = await this.findOne(id, restaurantId);
         menuItem.isAvailable = !menuItem.isAvailable;
         return await this.menuItemRepository.save(menuItem);

@@ -1,17 +1,38 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, loading } = useAuth();
+    const { login, loading, user } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [returnUrl, setReturnUrl] = useState("/");
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedReturnUrl = localStorage.getItem('returnUrl');
+            if (storedReturnUrl) {
+                setReturnUrl(storedReturnUrl);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (user) {
+            if (returnUrl) {
+                router.push(returnUrl);
+                localStorage.removeItem('returnUrl');
+            } else {
+                router.push('/');
+            }
+        }
+    }, [user, router, returnUrl]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -22,18 +43,34 @@ export default function LoginPage() {
             return;
         }
 
+        console.log("Girilen şifre:", password);
+
         setIsSubmitting(true);
         try {
             const success = await login(email, password);
             if (success) {
-                // Başarılı giriş - yönlendirme AuthContext'te yapılıyor
                 return;
             } else {
                 setErrorMessage("Giriş başarısız. Lütfen email ve şifrenizi kontrol edin.");
             }
         } catch (error) {
             console.error('Login error:', error);
-            setErrorMessage(error.message || "Giriş yapılırken bir hata oluştu.");
+            // Hata mesajları
+            if (error.message.includes('Sunucu bağlantısı kurulamadı')) {
+                setErrorMessage("Sunucu bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin veya örnek hesaplardan birini kullanın.");
+            } else if (error.message.includes('NetworkError')) {
+                setErrorMessage("Ağ hatası. Lütfen internet bağlantınızı kontrol edin.");
+            } else if (error.message.includes('401')) {
+                setErrorMessage("Giriş bilgileri hatalı. Lütfen email ve şifrenizi kontrol edin.");
+            } else if (error.message.includes('500')) {
+                setErrorMessage("Sunucu hatası. Lütfen daha sonra tekrar deneyin.");
+            } else if (error.message.includes('timeout')) {
+                setErrorMessage("Sunucu yanıt vermiyor. Lütfen daha sonra tekrar deneyin.");
+            } else if (error.message.includes('Geçersiz kullanıcı adı veya şifre')) {
+                setErrorMessage("Geçersiz kullanıcı adı veya şifre. Lütfen bilgilerinizi kontrol edin.");
+            } else {
+                setErrorMessage(error.message || "Giriş yapılırken bir hata oluştu.");
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -41,8 +78,8 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="w-24 h-24 mx-auto bg-pink-500 rounded-full flex items-center justify-center">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md pt-16">
+                <div className="w-24 h-24 mx-auto bg-red-600 rounded-full flex items-center justify-center">
                     <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
@@ -52,7 +89,7 @@ export default function LoginPage() {
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
                     Veya{' '}
-                    <Link href="/auth/register" className="font-medium text-pink-600 hover:text-pink-500">
+                    <Link href="/auth/register" className="font-medium text-red-600 hover:text-red-500">
                         yeni hesap oluşturun
                     </Link>
                 </p>
@@ -81,7 +118,7 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={isSubmitting}
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100"
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100"
                                 />
                             </div>
                         </div>
@@ -100,7 +137,7 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     disabled={isSubmitting}
-                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100"
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100"
                                 />
                             </div>
                         </div>
@@ -111,7 +148,7 @@ export default function LoginPage() {
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
-                                    className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+                                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                                 />
                                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                                     Beni hatırla
@@ -119,7 +156,7 @@ export default function LoginPage() {
                             </div>
 
                             <div className="text-sm">
-                                <Link href="/auth/forgot-password" className="font-medium text-pink-600 hover:text-pink-500">
+                                <Link href="/auth/forgot-password" className="font-medium text-red-600 hover:text-red-500">
                                     Şifremi unuttum
                                 </Link>
                             </div>
@@ -129,7 +166,7 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={isSubmitting || loading}
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                             </button>
@@ -151,13 +188,16 @@ export default function LoginPage() {
                                 <strong>Admin:</strong> admin@example.com
                             </div>
                             <div className="text-sm text-gray-600">
-                                <strong>Restoran:</strong> restaurant@example.com
+                                <strong>Restoranlar:</strong> restaurant1@example.com, restaurant2@example.com, restaurant3@example.com
                             </div>
                             <div className="text-sm text-gray-600">
                                 <strong>Müşteri:</strong> user@example.com
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                                (Şifre alanı şu an için kontrol edilmiyor)
+                                <strong>Şifre:</strong> password (tüm hesaplar için)
+                            </div>
+                            <div className="text-xs text-red-500 mt-1">
+                                Not: Bu hesaplar sadece test amaçlıdır ve API bağlantısı olmadığında çalışır
                             </div>
                         </div>
                     </div>

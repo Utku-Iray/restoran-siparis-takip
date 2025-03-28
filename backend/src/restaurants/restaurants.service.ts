@@ -9,9 +9,9 @@ export class RestaurantsService {
     constructor(
         @InjectRepository(Restaurant)
         private readonly restaurantRepository: Repository<Restaurant>,
-    ) {}
+    ) { }
 
-    async create(createRestaurantDto: CreateRestaurantDto, userId: string): Promise<Restaurant> {
+    async create(createRestaurantDto: CreateRestaurantDto, userId: number): Promise<Restaurant> {
         const restaurant = this.restaurantRepository.create({
             ...createRestaurantDto,
             userId,
@@ -19,7 +19,7 @@ export class RestaurantsService {
         return await this.restaurantRepository.save(restaurant);
     }
 
-    async findByUserId(userId: string): Promise<Restaurant> {
+    async findByUserId(userId: number): Promise<Restaurant> {
         const restaurant = await this.restaurantRepository.findOne({
             where: { userId },
         });
@@ -29,7 +29,7 @@ export class RestaurantsService {
         return restaurant;
     }
 
-    async update(id: string, updateData: Partial<CreateRestaurantDto>): Promise<Restaurant> {
+    async update(id: number, updateData: Partial<CreateRestaurantDto>): Promise<Restaurant> {
         const restaurant = await this.restaurantRepository.findOne({
             where: { id },
         });
@@ -40,7 +40,7 @@ export class RestaurantsService {
         return await this.restaurantRepository.save(restaurant);
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: number): Promise<void> {
         const restaurant = await this.restaurantRepository.findOne({
             where: { id },
         });

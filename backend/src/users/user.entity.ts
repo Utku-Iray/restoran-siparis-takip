@@ -1,10 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { MenuItem } from '../menu/menu.entity';
+import { MenuItem } from '../menu-items/entities/menu-item.entity';
 import { Order } from '../orders/order.entity';
 
 export enum UserRole {
   CUSTOMER = 'customer',
-  RESTAURANT = 'restaurant'
+  RESTAURANT = 'restaurant',
+  ADMIN = 'admin'
 }
 
 @Entity()

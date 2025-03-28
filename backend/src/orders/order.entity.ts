@@ -44,6 +44,9 @@ export class Order {
   @Column({ nullable: true })
   notes: string;
 
+  @Column({ nullable: true })
+  userId: number;
+
   @ManyToOne(() => User, user => user.orders)
   restaurant: User;
 

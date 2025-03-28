@@ -3,8 +3,8 @@ import { MenuItem } from '../../menu-items/entities/menu-item.entity';
 
 @Entity('restaurants')
 export class Restaurant {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @Column()
     name: string;
@@ -22,7 +22,7 @@ export class Restaurant {
     imageUrl: string;
 
     @Column()
-    userId: string;
+    userId: number;
 
     @OneToMany(() => MenuItem, menuItem => menuItem.restaurant)
     menuItems: MenuItem[];

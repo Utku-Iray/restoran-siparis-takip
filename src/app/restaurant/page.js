@@ -5,44 +5,14 @@ import Link from 'next/link';
 import { StarIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import { restaurantService } from '../services/restaurantService';
 
-// Geçici örnek veriler
-const SAMPLE_RESTAURANTS = [
-    {
-        id: 1,
-        name: "Lezzet Dünyası",
-        image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80",
-        rating: 4.5,
-        cuisine: "Türk Mutfağı",
-        address: "Atatürk Cad. No:123, İstanbul",
-        deliveryTime: "30-45 dk",
-        minOrder: 50
-    },
-    {
-        id: 2,
-        name: "Pizza Express",
-        image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80",
-        rating: 4.2,
-        cuisine: "İtalyan Mutfağı",
-        address: "İstiklal Cad. No:456, İstanbul",
-        deliveryTime: "25-40 dk",
-        minOrder: 60
-    },
-    {
-        id: 3,
-        name: "Sushi Master",
-        image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2340&q=80",
-        rating: 4.8,
-        cuisine: "Japon Mutfağı",
-        address: "Bağdat Cad. No:789, İstanbul",
-        deliveryTime: "35-50 dk",
-        minOrder: 100
-    }
-];
+
 
 export default function RestaurantsPage() {
     const [restaurants, setRestaurants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [usingApiData, setUsingApiData] = useState(false);
 
     useEffect(() => {
         loadRestaurants();
@@ -51,16 +21,33 @@ export default function RestaurantsPage() {
     const loadRestaurants = async () => {
         try {
             setLoading(true);
+            console.log("Tüm restoranlar yükleniyor...");
 
-            // Backend'den veri çekmeyi dene
             try {
                 const data = await restaurantService.getAllRestaurants();
-                setRestaurants(data);
-                console.log('Restoranlar başarıyla yüklendi:', data);
+                console.log("Restoranlar başarıyla yüklendi:", data);
+
+                if (data && data.length > 0) {
+                    const formattedData = data.map(restaurant => ({
+                        ...restaurant,
+                        image: restaurant.imageUrl || '/image/default-restaurant.jpg', // imageUrl -> image uyumluluğu
+                        cuisine: restaurant.cuisine || "Çeşitli Lezzetler",
+                        address: restaurant.address || "Adres bilgisi bulunamadı",
+                        deliveryTime: restaurant.deliveryTime || "30-45 dk",
+                        minOrder: restaurant.minOrder || 0
+                    }));
+
+                    setRestaurants(formattedData);
+                    setUsingApiData(localStorage.getItem('token') ? true : false);
+                } else {
+                    console.log("Hiç restoran bulunamadı");
+                    setRestaurants([]);
+                    setUsingApiData(false);
+                }
             } catch (apiError) {
-                console.warn('API\'den veriler yüklenemedi, örnek veriler kullanılıyor:', apiError);
-                // API çalışmıyorsa örnek verileri kullan
-                setRestaurants(SAMPLE_RESTAURANTS);
+                console.warn('API\'den veriler yüklenemedi:', apiError);
+                setRestaurants([]);
+                setUsingApiData(false);
             }
 
             setError(null);
@@ -72,10 +59,17 @@ export default function RestaurantsPage() {
         }
     };
 
+    // Arama fonksiyonu
+    const filteredRestaurants = restaurants.filter(restaurant =>
+        restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (restaurant.cuisine && restaurant.cuisine.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (restaurant.description && restaurant.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
             </div>
         );
     }
@@ -92,17 +86,53 @@ export default function RestaurantsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12">
+        <div className="min-h-screen bg-gray-50 pt-32">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Restoranlar</h1>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Restoranlar</h1>
 
-                {restaurants.length === 0 ? (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500">Henüz hiç restoran bulunmuyor.</p>
+                    {/* Arama Alanı */}
+                    <div className="relative w-full md:w-64">
+                        <input
+                            type="text"
+                            placeholder="Restoran veya mutfak ara..."
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                {usingApiData && restaurants.length > 0 && (
+                    <div className="mb-6 text-center">
+                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                            API verisi kullanılıyor
+                        </span>
+                    </div>
+                )}
+
+                {filteredRestaurants.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                        <p className="text-gray-500">
+                            {searchTerm ? `"${searchTerm}" için sonuç bulunamadı.` : "Henüz hiç restoran bulunmuyor."}
+                        </p>
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="mt-4 text-red-600 hover:text-red-700 font-medium"
+                            >
+                                Aramayı temizle
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {restaurants.map((restaurant) => (
+                        {filteredRestaurants.map((restaurant) => (
                             <Link
                                 key={restaurant.id}
                                 href={`/restaurant/${restaurant.id}`}
@@ -110,7 +140,7 @@ export default function RestaurantsPage() {
                             >
                                 <div className="relative h-48">
                                     <img
-                                        src={restaurant.image || "https://via.placeholder.com/800x600?text=Restoran"}
+                                        src={restaurant.image || restaurant.imageUrl || "/image/default-restaurant.jpg"}
                                         alt={restaurant.name}
                                         className="w-full h-full object-cover rounded-t-lg"
                                     />

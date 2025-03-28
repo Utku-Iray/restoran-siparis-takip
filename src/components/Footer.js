@@ -11,9 +11,9 @@ export default function Footer() {
                         <p className="text-gray-600">
                             Adres: Örnek Mahallesi, Örnek Sokak No:1
                             <br />
-                            Telefon: (555) 123 45 67
+                            Telefon: (553) 566 92 71
                             <br />
-                            E-posta: info@restoransiparis.com
+                            E-posta: info@rslezzet.com
                         </p>
                     </div>
                     <div>
@@ -40,7 +40,7 @@ export default function Footer() {
                     </div>
                 </div>
                 <div className="border-t border-gray-200 mt-8 pt-6 text-center text-gray-600">
-                    © 2024 Restoran Sipariş. Tüm hakları saklıdır.
+                    © 2025 Restoran Sipariş. Tüm hakları saklıdır.
                 </div>
             </div>
         </footer>

@@ -4,15 +4,32 @@ import Link from 'next/link'
 import { useCart } from '@/app/context/CartContext'
 import { useAuth } from '@/app/context/AuthContext'
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Card from './Card'
 import { UserIcon } from '@heroicons/react/24/outline'
+import { useRouter } from 'next/navigation'
 
-export default function Header() {
-    const { items } = useCart()
-    const { user, logout } = useAuth()
+const ClientSideHeader = () => {
+    const router = useRouter()
+    const auth = useAuth() || { user: null, logout: () => { } }
+    const cart = useCart() || { items: [], isCartOpen: false, setIsCartOpen: () => { } }
+
+    const { user, logout } = auth
+    const { items, isCartOpen, setIsCartOpen } = cart
+
     const [language, setLanguage] = useState('TR')
-    const [isCartOpen, setIsCartOpen] = useState(false)
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+    const [isMounted, setIsMounted] = useState(false)
+
+
+    useEffect(() => {
+        setIsMounted(true);
+
+    }, []);
+
+    if (!isMounted) {
+        return <div className="h-32"></div> // Boş header placeholder
+    }
 
     const handleLogout = async () => {
         await logout()
@@ -29,7 +46,46 @@ export default function Header() {
                         </Link>
                         <button
                             onClick={handleLogout}
-                            className="px-4 py-2 text-sm font-medium text-white bg-pink-500 rounded-md hover:bg-pink-600"
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                        >
+                            Çıkış Yap
+                        </button>
+                    </div>
+                );
+            }
+
+            if (user.role === 'admin') {
+                return (
+                    <div className="flex items-center space-x-4">
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                            >
+                                <UserIcon className="w-5 h-5" />
+                                <span>Site Yöneticisi</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 ml-1"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {isProfileMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                    <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Admin Panel
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
                         >
                             Çıkış Yap
                         </button>
@@ -87,7 +143,7 @@ export default function Header() {
                 </Link>
                 <Link
                     href="/auth/register"
-                    className="px-4 py-2 text-sm font-medium text-white bg-pink-500 rounded-md hover:bg-pink-600"
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
                 >
                     Kayıt Ol
                 </Link>
@@ -97,21 +153,23 @@ export default function Header() {
 
     return (
         <>
-            <header className="bg-white border-b border-gray-100">
+            <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-between h-16">
-                        <Link href="/" className="text-xl font-semibold">
-                            Logo
+                    <div className="flex items-center justify-between h-24">
+                        <Link href="/" className="flex items-center">
+                            <img
+                                src="/image/rs-yemek-logo.png"
+                                alt="RS Yemek Logo"
+                                className="h-24 w-auto"
+                            />
                         </Link>
 
                         <nav className="hidden md:flex items-center space-x-8">
-                            <Link href="/restaurant" className="text-gray-700 hover:text-gray-900">
+                            <Link href="/restaurant" className="text-gray-700 hover:text-red-600 font-medium">
                                 Restoranlar
                             </Link>
-                            <Link href="/hakkimizda" className="text-gray-700 hover:text-gray-900">
-                                Hakkımızda
-                            </Link>
-                            <Link href="/contact" className="text-gray-700 hover:text-gray-900">
+
+                            <Link href="/contact" className="text-gray-700 hover:text-red-600 font-medium">
                                 İletişim
                             </Link>
                         </nav>
@@ -119,7 +177,7 @@ export default function Header() {
                         <div className="flex items-center space-x-4">
                             {renderAuthButtons()}
 
-                            <div className="relative">
+                            <div className="relative hidden md:block">
                                 <button className="flex items-center space-x-1 px-3 py-2 bg-gray-100 rounded-md">
                                     <svg
                                         className="w-4 h-4 text-gray-600"
@@ -138,7 +196,7 @@ export default function Header() {
                                 </button>
                             </div>
 
-                            {user && user.role !== 'restaurant' && (
+                            {user && user.role !== 'restaurant' && user.role !== 'admin' && (
                                 <button onClick={() => setIsCartOpen(true)} className="relative p-2">
                                     <svg
                                         className="w-6 h-6 text-gray-700"
@@ -154,7 +212,7 @@ export default function Header() {
                                         />
                                     </svg>
                                     {items.length > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
                                             {items.length}
                                         </span>
                                     )}
@@ -168,4 +226,11 @@ export default function Header() {
             <Card isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
         </>
     )
-} 
+}
+
+// Server tarafında boş placeholder, client tarafında gerçek bileşen
+const Header = dynamic(() => Promise.resolve(ClientSideHeader), {
+    ssr: false,
+});
+
+export default Header; 

@@ -1,6 +1,6 @@
 import axiosInstance from './axiosConfig';
 
-// Geçici olarak localStorage'da menü öğelerini saklamak için yardımcı fonksiyonlar
+
 const getStoredMenuItems = () => {
     if (typeof window === 'undefined') return [];
 
@@ -19,14 +19,14 @@ export const menuService = {
     getAllMenuItems: async () => {
         try {
             try {
-                // Önce backend'den veri almayı dene
+
                 const response = await axiosInstance.get('/menu');
                 const items = response.data.map(item => ({
                     ...item,
                     price: parseFloat(item.price)
                 }));
 
-                // Restoran bilgilerini localStorage'a kaydet
+
                 if (items.length > 0) {
                     const restaurantId = items[0].restaurantId;
                     const restaurantName = items[0].restaurantName || 'Restoran';
@@ -34,33 +34,32 @@ export const menuService = {
                     localStorage.setItem('restaurantName', restaurantName);
                 }
 
-                // Menü öğelerini localStorage'a kaydet
+
                 storeMenuItems(items);
                 return items;
             } catch (apiError) {
                 console.warn('API\'den veri alınamadı, localStorage\'dan veri okunuyor:', apiError);
 
-                // API'den veri alınamazsa, localStorage'dan oku
                 const storedItems = getStoredMenuItems();
                 console.log('localStorage\'dan menü öğeleri yüklendi:', storedItems.length);
                 return storedItems;
             }
         } catch (error) {
             console.error('Menü öğeleri alınırken hata:', error);
-            return []; // Hata durumunda boş dizi döndür
+            return [];
         }
     },
 
     createMenuItem: async (menuItem) => {
         try {
             try {
-                // Önce backend'e göndermeyi dene
+
                 const response = await axiosInstance.post('/menu', {
                     ...menuItem,
                     price: parseFloat(menuItem.price)
                 });
 
-                // Başarılı olursa, localStorage'ı güncelle
+
                 const storedItems = getStoredMenuItems();
                 storeMenuItems([...storedItems, response.data]);
 
@@ -68,7 +67,7 @@ export const menuService = {
             } catch (apiError) {
                 console.warn('API\'ye veri gönderilemedi, localStorage\'a kaydediliyor:', apiError);
 
-                // API'ye gönderilemezse, localStorage'a kaydet
+
                 const newItem = {
                     ...menuItem,
                     id: `local-${Date.now()}`,
@@ -91,13 +90,13 @@ export const menuService = {
     updateMenuItem: async (id, menuItem) => {
         try {
             try {
-                // Önce backend'e göndermeyi dene
+
                 const response = await axiosInstance.patch(`/menu/${id}`, {
                     ...menuItem,
                     price: parseFloat(menuItem.price)
                 });
 
-                // Başarılı olursa, localStorage'ı güncelle
+
                 const storedItems = getStoredMenuItems();
                 const updatedItems = storedItems.map(item =>
                     item.id === id ? response.data : item
@@ -108,7 +107,7 @@ export const menuService = {
             } catch (apiError) {
                 console.warn('API\'ye veri gönderilemedi, localStorage\'a kaydediliyor:', apiError);
 
-                // API'ye gönderilemezse, localStorage'u güncelle
+
                 const storedItems = getStoredMenuItems();
                 const updatedItem = {
                     ...menuItem,
@@ -133,10 +132,10 @@ export const menuService = {
     deleteMenuItem: async (id) => {
         try {
             try {
-                // Önce backend'e göndermeyi dene
+
                 const response = await axiosInstance.delete(`/menu/${id}`);
 
-                // Başarılı olursa, localStorage'ı güncelle
+
                 const storedItems = getStoredMenuItems();
                 const remainingItems = storedItems.filter(item => item.id !== id);
                 storeMenuItems(remainingItems);
@@ -145,7 +144,7 @@ export const menuService = {
             } catch (apiError) {
                 console.warn('API\'ye silme isteği gönderilemedi, localStorage\'dan siliniyor:', apiError);
 
-                // API'ye gönderilemezse, localStorage'dan sil
+
                 const storedItems = getStoredMenuItems();
                 const remainingItems = storedItems.filter(item => item.id !== id);
                 storeMenuItems(remainingItems);
@@ -161,10 +160,10 @@ export const menuService = {
     toggleAvailability: async (id) => {
         try {
             try {
-                // Önce backend'e göndermeyi dene
+
                 const response = await axiosInstance.patch(`/menu/${id}/toggle-availability`);
 
-                // Başarılı olursa, localStorage'ı güncelle
+
                 const storedItems = getStoredMenuItems();
                 const updatedItems = storedItems.map(item => {
                     if (item.id === id) {
@@ -181,7 +180,7 @@ export const menuService = {
             } catch (apiError) {
                 console.warn('API\'ye veri gönderilemedi, localStorage\'a kaydediliyor:', apiError);
 
-                // API'ye gönderilemezse, localStorage'u güncelle
+
                 const storedItems = getStoredMenuItems();
                 const updatedItems = storedItems.map(item => {
                     if (item.id === id) {

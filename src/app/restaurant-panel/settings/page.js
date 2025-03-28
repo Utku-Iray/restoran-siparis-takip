@@ -145,17 +145,18 @@ export default function SettingsPage() {
     if (loading || isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 py-8">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="bg-white shadow rounded-lg p-6">
+        <div className="min-h-screen bg-gray-100 pt-36">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="bg-white shadow-sm rounded-lg p-6">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-6">Ayarlar</h1>
+
                     <div className="flex justify-between items-center mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900">Restoran Ayarları</h1>
                         <button
                             onClick={() => router.push('/restaurant-panel')}
                             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
@@ -195,7 +196,7 @@ export default function SettingsPage() {
                                         value={formData.name}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -210,7 +211,7 @@ export default function SettingsPage() {
                                         value={formData.email}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -224,7 +225,7 @@ export default function SettingsPage() {
                                         name="phone"
                                         value={formData.phone}
                                         onChange={handleChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -238,7 +239,7 @@ export default function SettingsPage() {
                                         value={formData.address}
                                         onChange={handleChange}
                                         rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
                             </div>
@@ -257,7 +258,7 @@ export default function SettingsPage() {
                                         value={formData.description}
                                         onChange={handleChange}
                                         rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -272,7 +273,7 @@ export default function SettingsPage() {
                                         value={formData.openingHours}
                                         onChange={handleChange}
                                         placeholder="Örn: Hafta içi: 09:00-22:00, Hafta sonu: 10:00-23:00"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -287,7 +288,7 @@ export default function SettingsPage() {
                                         value={formData.cuisineType}
                                         onChange={handleChange}
                                         placeholder="Örn: Türk Mutfağı, İtalyan, Fast Food"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
                             </div>
@@ -317,7 +318,7 @@ export default function SettingsPage() {
                                         name="logo"
                                         accept="image/*"
                                         onChange={handleImageChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -340,7 +341,7 @@ export default function SettingsPage() {
                                         name="coverImage"
                                         accept="image/*"
                                         onChange={handleImageChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
                             </div>
@@ -350,7 +351,7 @@ export default function SettingsPage() {
                             <button
                                 type="submit"
                                 disabled={isSaving}
-                                className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50"
+                                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                             >
                                 {isSaving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                             </button>

@@ -15,39 +15,107 @@ const storeRestaurantData = (data) => {
     localStorage.setItem('restaurantData', JSON.stringify(data));
 };
 
+// Sample veriler - API bağlantısı olmadığında kullanılacak
+const sampleRestaurants = [
+    {
+        id: 1,
+        name: "Lezzet Dünyası",
+        description: "Türk ve dünya mutfağından seçkin lezzetler",
+        rating: 4.5,
+        imageUrl: '/image/restaurant1.jpg',
+        cuisine: "Türk Mutfağı",
+        deliveryTime: "30-45 dk"
+    },
+    {
+        id: 2,
+        name: "Pizza Express",
+        description: "En lezzetli İtalyan pizzaları",
+        rating: 4.2,
+        imageUrl: '/image/restaurant2.jpg',
+        cuisine: "İtalyan Mutfağı",
+        deliveryTime: "25-40 dk"
+    },
+    {
+        id: 3,
+        name: "Sushi Master",
+        description: "Autentik Japon lezzetleri",
+        rating: 4.8,
+        imageUrl: '/image/restaurant3.jpg',
+        cuisine: "Japon Mutfağı",
+        deliveryTime: "35-50 dk"
+    }
+];
+
 export const restaurantService = {
     // Tüm restoranları getir
     getAllRestaurants: async () => {
+        if (typeof window === 'undefined') {
+            return sampleRestaurants;
+        }
+
         try {
-            const response = await axiosInstance.get('/restaurants');
-            return response.data;
+            // Token kontrolü
+            const token = localStorage.getItem('token');
+
+            // Eğer token varsa, API'den restoranları çek
+            if (token) {
+                console.log('Token bulundu, restoranlar API\'den yükleniyor...');
+                try {
+                    const response = await axiosInstance.get('/restaurants');
+                    console.log('Restoranlar başarıyla alındı:', response.data);
+                    return response.data;
+                } catch (error) {
+                    console.warn('Giriş yapılmış olmasına rağmen API hatası:', error);
+                    return sampleRestaurants;
+                }
+            } else {
+                console.log('Token bulunamadı, örnek veriler kullanılıyor');
+                return sampleRestaurants;
+            }
         } catch (error) {
             console.error('Restoranlar alınırken hata:', error);
-            throw error;
+            return sampleRestaurants;
         }
     },
 
-    // Bir restoranın detaylarını getir
-    getRestaurantById: async () => {
+    getRestaurantById: async (id) => {
         try {
-            // Önce backend API'den veri almayı dene
-            try {
-                const response = await axiosInstance.get('/restaurants');
-                // Başarılı olursa, localStorage'a kaydet ve döndür
-                storeRestaurantData(response.data);
-                return response.data;
-            } catch (apiError) {
-                console.warn('API\'den veri alınamadı, localStorage\'dan veri okunuyor:', apiError);
+            // Token kontrolü
+            const token = localStorage?.getItem('token');
 
-                // API'den veri alınamazsa, localStorage'dan oku
-                const storedData = getStoredRestaurantData();
-                if (storedData) {
-                    console.log('localStorage\'dan veri yüklendi:', storedData);
-                    return storedData;
+            if (token) {
+                try {
+                    const response = await axiosInstance.get(`/restaurants/${id}`);
+                    return response.data;
+                } catch (apiError) {
+                    console.warn(`Restoran (ID: ${id}) bilgileri API'den alınamadı:`, apiError);
+
+                    // Tek bir restoran için örnek veri
+                    return sampleRestaurants.find(r => r.id.toString() === id.toString()) || {
+                        id: id,
+                        name: "Örnek Restoran",
+                        description: "API bağlantısı olmadığında gösterilen örnek restoran",
+                        rating: 4.0,
+                        imageUrl: '/image/default-restaurant.jpg',
+                        cuisine: "Karma Mutfak",
+                        deliveryTime: "30-45 dk"
+                    };
+                }
+            } else {
+                const restaurant = sampleRestaurants.find(r => r.id.toString() === id.toString());
+                if (restaurant) {
+                    return restaurant;
                 }
 
-                // Eğer localStorage'da da veri yoksa, API hatasını fırlat
-                throw apiError;
+                return {
+                    id: id,
+                    name: "Örnek Restoran",
+                    description: "API bağlantısı olmadığında gösterilen örnek restoran",
+                    rating: 4.0,
+                    imageUrl: '/image/default-restaurant.jpg',
+                    cuisine: "Karma Mutfak",
+                    deliveryTime: "30-45 dk"
+                };
             }
         } catch (error) {
             console.error(`Restoran bilgileri alınırken hata:`, error);
@@ -55,38 +123,154 @@ export const restaurantService = {
         }
     },
 
-    // Bir restoranın menü öğelerini getir
     getRestaurantMenu: async (id) => {
+        if (typeof window === 'undefined') {
+            return [];
+        }
+
+        const sampleMenuItems = {
+            1: [
+                {
+                    id: 101,
+                    name: "Adana Kebap",
+                    description: "Özel baharatlarla hazırlanmış el yapımı kebap",
+                    price: 120,
+                    image: "/image/kebap.jpg",
+                    category: "Ana Yemekler",
+                    restaurantId: 1
+                },
+                {
+                    id: 102,
+                    name: "Mercimek Çorbası",
+                    description: "Geleneksel tarif ile hazırlanmış mercimek çorbası",
+                    price: 45,
+                    image: "/image/mercimek-corbasi.jpg",
+                    category: "Çorbalar",
+                    restaurantId: 1
+                },
+                {
+                    id: 103,
+                    name: "İçli Köfte",
+                    description: "Ev yapımı lezzetli içli köfte",
+                    price: 35,
+                    image: "/image/icli-kofte.jpg",
+                    category: "Mezeler",
+                    restaurantId: 1
+                }
+            ],
+            2: [
+                {
+                    id: 201,
+                    name: "Margarita Pizza",
+                    description: "Domates, mozzarella ve fesleğen ile",
+                    price: 90,
+                    image: "/image/pizza.jpg",
+                    category: "Pizzalar",
+                    restaurantId: 2
+                },
+                {
+                    id: 202,
+                    name: "Spagetti Bolonez",
+                    description: "Özel soslu spagetti",
+                    price: 75,
+                    image: "/image/makarna.jpg",
+                    category: "Makarnalar",
+                    restaurantId: 2
+                }
+            ],
+            3: [
+                {
+                    id: 301,
+                    name: "Karışık Sushi Tabağı",
+                    description: "8 adet farklı çeşitlerden oluşan tabak",
+                    price: 180,
+                    image: "/image/sushi.jpg",
+                    category: "Sushi",
+                    restaurantId: 3
+                },
+                {
+                    id: 302,
+                    name: "Kahvaltı Tabağı",
+                    description: "Zengin içerikli kahvaltı tabağı",
+                    price: 95,
+                    image: "/image/kahvalti.jpg",
+                    category: "Kahvaltı",
+                    restaurantId: 3
+                }
+            ]
+        };
+
         try {
-            const response = await axiosInstance.get(`/menu/restaurant/${id}`);
-            const items = response.data.map(item => ({
-                ...item,
-                price: parseFloat(item.price)
-            }));
-            return items;
+            const token = localStorage?.getItem('token');
+
+            if (token) {
+                try {
+                    const response = await axiosInstance.get(`/menu/restaurant/${id}`);
+                    const items = response.data.map(item => ({
+                        ...item,
+                        price: parseFloat(item.price)
+                    }));
+                    console.log(`Restoran (ID: ${id}) menüsü API'den yüklendi:`, items.length, "adet ürün");
+                    return items;
+                } catch (apiError) {
+                    console.warn(`Restoran (ID: ${id}) menüsü API'den alınamadı, örnek menü kullanılıyor:`, apiError);
+
+                    const menuId = id.toString();
+                    if (sampleMenuItems[menuId]) {
+                        return sampleMenuItems[menuId];
+                    }
+
+                    return [
+                        {
+                            id: 999,
+                            name: "Örnek Yemek",
+                            description: "API bağlantısı olmadığından örnek yemek gösteriliyor",
+                            price: 50,
+                            image: "/image/default-restaurant.jpg",
+                            category: "Genel",
+                            restaurantId: parseInt(id)
+                        }
+                    ];
+                }
+            } else {
+                console.log(`Token bulunamadı, restoran (ID: ${id}) için örnek menü kullanılıyor`);
+                const menuId = id.toString();
+                if (sampleMenuItems[menuId]) {
+                    return sampleMenuItems[menuId];
+                }
+
+                return [
+                    {
+                        id: 999,
+                        name: "Örnek Yemek",
+                        description: "API bağlantısı olmadığından örnek yemek gösteriliyor",
+                        price: 50,
+                        image: "/image/default-restaurant.jpg",
+                        category: "Genel",
+                        restaurantId: parseInt(id)
+                    }
+                ];
+            }
         } catch (error) {
             console.error(`Restoran menüsü alınırken hata (ID: ${id}):`, error);
-            throw error;
+            return [];
         }
     },
 
-    // Restoran bilgilerini güncelle
     updateRestaurant: async (restaurantData) => {
         try {
-            // Önce backend API'ye veri göndermeyi dene
             try {
                 console.log(`Restoran bilgileri güncelleniyor:`, restaurantData);
                 const response = await axiosInstance.patch('/restaurants', restaurantData);
 
-                // Başarılı olursa, localStorage'a kaydet ve döndür
                 storeRestaurantData(restaurantData);
                 return response.data;
             } catch (apiError) {
                 console.warn('API\'ye veri gönderilemedi, localStorage\'a kaydediliyor:', apiError);
 
-                // API'ye veri gönderilemezse, localStorage'a kaydet
+
                 storeRestaurantData(restaurantData);
-                return restaurantData; // Başarılı bir cevap simüle et
+                return restaurantData;
             }
         } catch (error) {
             console.error(`Restoran bilgileri güncellenirken hata:`, error);

@@ -25,31 +25,31 @@ export class OrdersService {
     private ordersRepository: Repository<Order>,
     @InjectRepository(User)
     private usersRepository: Repository<User>
-  ) {}
+  ) { }
 
   async createOrder(createOrderDto: CreateOrderDto, restaurantId: number): Promise<Order> {
     console.log(`OrdersService - Creating order for restaurant ID: ${restaurantId}`);
-    
-    // restaurantId'nin sayı olduğundan emin ol
+
+  
     const resId = Number(restaurantId);
     if (isNaN(resId)) {
       throw new Error(`Invalid restaurant ID: ${restaurantId}`);
     }
-    
+
     const restaurant = await this.usersRepository.findOne({ where: { id: resId } });
     if (!restaurant) {
       throw new NotFoundException(`Restaurant with ID ${resId} not found`);
     }
-    
+
     console.log(`OrdersService - Found restaurant: ${restaurant.name} (ID: ${restaurant.id})`);
-    
+
     const order = this.ordersRepository.create({
       ...createOrderDto,
       restaurant
     });
-    
+
     console.log(`OrdersService - Order created with restaurant ID: ${restaurant.id}`);
-    
+
     return this.ordersRepository.save(order);
   }
 
@@ -58,6 +58,18 @@ export class OrdersService {
       where: { restaurant: { id: restaurantId } },
       order: { createdAt: 'DESC' }
     });
+  }
+
+  async getUserOrders(userId: number): Promise<Order[]> {
+    console.log(`OrdersService - Getting orders for user ID: ${userId}`);
+
+    const orders = await this.ordersRepository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' }
+    });
+
+    console.log(`OrdersService - Found ${orders.length} orders for user ID: ${userId}`);
+    return orders;
   }
 
   async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
@@ -77,4 +89,4 @@ export class OrdersService {
     }
     return order;
   }
-} 
+}

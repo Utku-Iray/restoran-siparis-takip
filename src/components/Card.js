@@ -2,9 +2,25 @@
 
 import { useCart } from '@/app/context/CartContext'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { useState, useEffect } from 'react'
 
-export default function Card({ isOpen, onClose }) {
-    const { items, removeFromCart, updateQuantity, total } = useCart()
+const CardComponent = ({ isOpen, onClose }) => {
+    // Güvenli hook kullanımı için default değerler
+    const cart = useCart() || { items: [], removeFromCart: () => { }, updateQuantity: () => { }, total: 0 }
+    const { items, removeFromCart, updateQuantity, total } = cart
+
+    const [isMounted, setIsMounted] = useState(false)
+
+    // Client tarafında mount olduğunu kontrol et
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
+    // Server tarafında render edilmemesi için
+    if (!isMounted) {
+        return null // Boş sepet placeholder
+    }
 
     return (
         <>
@@ -57,7 +73,7 @@ export default function Card({ isOpen, onClose }) {
                                 <p className="text-gray-500 mb-4">Sepetiniz şu an boş</p>
                                 <button
                                     onClick={onClose}
-                                    className="text-pink-500 hover:text-pink-600 font-medium transition-colors"
+                                    className="text-red-600 hover:text-red-700 font-medium transition-colors"
                                 >
                                     Alışverişe Başla
                                 </button>
@@ -67,7 +83,7 @@ export default function Card({ isOpen, onClose }) {
                                 {items.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="flex items-center space-x-4 bg-white border border-gray-100 p-4 rounded-lg hover:border-gray-200 transition-colors"
+                                        className="flex items-center space-x-4 bg-white border border-black p-4 rounded-lg hover:border-black transition-colors"
                                     >
                                         <div className="flex-1">
                                             <h3 className="font-medium text-gray-800">{item.name}</h3>
@@ -76,14 +92,14 @@ export default function Card({ isOpen, onClose }) {
                                         <div className="flex items-center space-x-2">
                                             <button
                                                 onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                                                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-full hover:bg-gray-50 transition-colors"
+                                                className="w-8 h-8 flex items-center justify-center border border-black rounded-full text-black hover:bg-gray-50 transition-colors"
                                             >
                                                 -
                                             </button>
-                                            <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                            <span className="w-8 text-center font-medium text-black">{item.quantity}</span>
                                             <button
                                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-full hover:bg-gray-50 transition-colors"
+                                                className="w-8 h-8 flex items-center justify-center border text-black border-black rounded-full hover:bg-gray-50 transition-colors"
                                             >
                                                 +
                                             </button>
@@ -121,7 +137,7 @@ export default function Card({ isOpen, onClose }) {
                             </div>
                             <Link
                                 href="/cart"
-                                className="block w-full bg-pink-500 text-white text-center py-3 rounded-lg font-semibold hover:bg-pink-600 transition-colors"
+                                className="block w-full bg-red-600 text-white text-center py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
                                 onClick={onClose}
                             >
                                 Sepete Git
@@ -138,4 +154,11 @@ export default function Card({ isOpen, onClose }) {
             </div>
         </>
     )
-} 
+}
+
+// Server tarafında boş placeholder, client tarafında gerçek bileşen
+const Card = dynamic(() => Promise.resolve(CardComponent), {
+    ssr: false,
+});
+
+export default Card; 

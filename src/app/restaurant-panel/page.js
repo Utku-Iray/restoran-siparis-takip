@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { MdMenuBook } from 'react-icons/md';
 
-// Örnek veriler - Backend entegrasyonunda değiştirilecek
+
 const SAMPLE_ORDERS = [
     {
         id: "ORD123",
@@ -24,10 +24,10 @@ const SAMPLE_ORDERS = [
         orderTime: "14:30",
         address: "Atatürk Cad. No:123, Çankaya/Ankara"
     },
-    // Diğer siparişler backend'den gelecek
+
 ];
 
-// Not: Menü öğeleri için örnek veri kaldırıldı, gerçek veriler API'den alınıyor
+
 
 const SAMPLE_STATS = {
     dailyOrders: 45,
@@ -89,13 +89,14 @@ export default function RestaurantPanel() {
         image: '',
         category: ''
     });
+    const [isTestMode, setIsTestMode] = useState(false);
 
     useEffect(() => {
         if (!loading && (!user || user.role !== 'restaurant')) {
             router.push('/auth/login');
         }
 
-        // Kullanıcı login olduğunda restaurantId'yi localStorage'a kaydet
+
         if (user && user.restaurantId) {
             console.log("Dashboard - user.restaurantId localStorage'a kaydediliyor:", user.restaurantId);
             localStorage.setItem('restaurantId', user.restaurantId);
@@ -106,7 +107,7 @@ export default function RestaurantPanel() {
         if (user) {
             console.log('Restaurant Panel - Kullanıcı bilgisi:', user);
 
-            // RestaurantId hem user.id hem de user.restaurantId olabilir, ikisini de kaydet
+
             if (user.restaurantId) {
                 localStorage.setItem('restaurantId', user.restaurantId);
                 console.log('Restaurant Panel - user.restaurantId localStorage\'a kaydedildi:', user.restaurantId);
@@ -115,21 +116,24 @@ export default function RestaurantPanel() {
                 console.log('Restaurant Panel - user.id localStorage\'a kaydedildi:', user.id);
             }
 
-            // Her iki durumda da restaurant adını kaydet
+
             if (user.name) {
                 localStorage.setItem('restaurantName', user.name);
             }
 
-            loadMenuItems();
-            loadOrders();
 
-            // Her 10 saniyede bir siparişleri yenile
+            checkApiConnection();
+
+
+            loadInitialData();
+
+
             const orderInterval = setInterval(() => {
-                console.log('Restaurant Panel - Siparişler yenileniyor...');
-                loadOrders();
+                console.log('Restaurant Panel - Siparişler sessizce yenileniyor...');
+                refreshOrdersSilently();
             }, 10000);
 
-            // Component unmount olduğunda interval'i temizle
+
             return () => clearInterval(orderInterval);
         }
     }, [user]);
@@ -145,31 +149,88 @@ export default function RestaurantPanel() {
         }
     }, [activeTab]);
 
+
+    const checkApiConnection = async () => {
+        try {
+
+            const response = await fetch('http://localhost:3000/health', {
+                method: 'GET',
+                cache: 'no-store',
+                signal: new AbortController().signal,
+                timeout: 3000
+            });
+            setIsTestMode(false);
+            console.log('API bağlantısı başarılı, gerçek mod aktif');
+        } catch (error) {
+            console.log('API bağlantısı yok, test modu aktif:', error);
+            setIsTestMode(true);
+        }
+    };
+
+
+    const loadInitialData = async () => {
+        setIsLoading(true);
+        try {
+            await loadMenuItems();
+            await loadOrders();
+        } catch (error) {
+            console.error("İlk veri yüklemesi sırasında hata:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const refreshOrdersSilently = async () => {
+        try {
+            console.log('Restaurant Panel - Siparişler arkaplanda yenileniyor...');
+            const data = await orderService.getRestaurantOrders();
+
+            // Test verileri kullanılıyor mu kontrol et
+            if (data.some(order => order.isTestData)) {
+                setIsTestMode(true);
+            }
+
+
+            const sortedOrders = data.sort((a, b) =>
+                new Date(b.createdAt) - new Date(a.createdAt)
+            );
+
+            setOrders(sortedOrders);
+
+
+            calculateDashboardStats();
+        } catch (err) {
+            console.error('Siparişleri sessizce yenilerken hata:', err);
+
+        }
+    };
+
     const loadMenuItems = async () => {
         try {
             console.log("loadMenuItems çalıştırılıyor - DASHBOARD SAYFASI");
             setIsLoading(true);
 
-            // restaurantId için birden fazla kaynağı kontrol et
+
             let restaurantId = null;
 
-            // 1. Kaynak: user nesnesinden
+
             if (user && user.restaurantId) {
                 restaurantId = user.restaurantId;
                 console.log("Dashboard - restaurantId user nesnesinden alındı:", restaurantId);
             }
-            // 2. Kaynak: user.id değerinden (bazı API'ler bunu kullanıyor olabilir)
+
             else if (user && user.id) {
                 restaurantId = user.id;
                 console.log("Dashboard - restaurantId user.id'den alındı:", restaurantId);
             }
-            // 3. Kaynak: localStorage'dan
+
             else {
                 restaurantId = localStorage.getItem('restaurantId');
                 console.log("Dashboard - restaurantId localStorage'dan alındı:", restaurantId);
             }
 
-            // restaurantId hala bulunamadıysa
+
             if (!restaurantId) {
                 console.warn("Dashboard - restaurantId hiçbir kaynaktan bulunamadı, boş menü listesi kullanılıyor");
                 setMenuItems([]);
@@ -178,12 +239,12 @@ export default function RestaurantPanel() {
                 return;
             }
 
-            // API için her iki durumu da localStorage'a kaydet
+
             if (typeof window !== 'undefined') {
                 localStorage.setItem('restaurantId', restaurantId);
                 console.log("Dashboard - restaurantId localStorage'a kaydedildi:", restaurantId);
 
-                // Eğer user.name değeri varsa, restoran adını da kaydet
+
                 if (user?.name) {
                     localStorage.setItem('restaurantName', user.name);
                     console.log("Dashboard - restaurantName localStorage'a kaydedildi:", user.name);
@@ -193,7 +254,7 @@ export default function RestaurantPanel() {
             try {
                 console.log(`Dashboard - Menü öğeleri restaurantId=${restaurantId} için getiriliyor`);
 
-                // Önce önbellek yaşı kontrol edilir
+
                 const lastUpdatedStr = localStorage.getItem('menuItemsLastUpdated');
                 let useFreshData = true;
 
@@ -202,7 +263,7 @@ export default function RestaurantPanel() {
                     const now = new Date();
                     const hoursDiff = (now - lastUpdated) / (1000 * 60 * 60);
 
-                    // 2 saatten eskiyse, önbelleği temizleyelim
+
                     if (hoursDiff > 2) {
                         console.log('Önbellek 2 saatten eski, temizleniyor...');
                         await menuItemService.clearCache();
@@ -212,15 +273,20 @@ export default function RestaurantPanel() {
 
                 const items = await menuItemService.getMenuItems(restaurantId);
 
+
+                if (items && items.some(item => item.isTestData)) {
+                    setIsTestMode(true);
+                }
+
                 if (!items || !Array.isArray(items)) {
                     console.warn("Dashboard - Veri alındı ama dizi değil:", items);
                     setMenuItems([]);
 
-                    // Önbelleği temizle ve yeniden dene
+
                     console.log("Geçersiz veri, önbelleği temizleyip yeniden deneniyor...");
                     await menuItemService.clearCache();
 
-                    // Yeniden bir deneme yap
+
                     const retryItems = await menuItemService.getMenuItems(restaurantId);
                     if (Array.isArray(retryItems)) {
                         console.log(`Dashboard - Yeniden deneme başarılı, ${retryItems.length} menü öğesi yüklendi`);
@@ -238,7 +304,7 @@ export default function RestaurantPanel() {
             } catch (err) {
                 console.error("Dashboard - Menü yüklenirken hata:", err);
 
-                // Eğer API hatası ise, menüyü temizleyelim
+
                 console.log("API hatası oluştu, önbelleği temizleniyor...");
                 await menuItemService.clearCache();
 
@@ -261,7 +327,12 @@ export default function RestaurantPanel() {
             const data = await orderService.getRestaurantOrders();
             console.log('Restaurant Panel - Yüklenen siparişler:', data);
 
-            // Siparişleri tarihe göre sırala (en yeni en üstte)
+            // Test verileri kullanılıyor mu kontrol et
+            if (data.some(order => order.isTestData)) {
+                setIsTestMode(true);
+            }
+
+
             const sortedOrders = data.sort((a, b) =>
                 new Date(b.createdAt) - new Date(a.createdAt)
             );
@@ -269,7 +340,7 @@ export default function RestaurantPanel() {
             setOrders(sortedOrders);
             setError(null);
 
-            // Dashboard istatistiklerini güncelle
+
             calculateDashboardStats();
         } catch (err) {
             console.error('Restaurant Panel - Siparişler yüklenirken hata:', err);
@@ -282,7 +353,7 @@ export default function RestaurantPanel() {
     const handleStatusUpdate = async (orderId, newStatus) => {
         try {
             await orderService.updateOrderStatus(orderId, newStatus);
-            loadOrders(); // Siparişleri yeniden yükle
+            loadOrders();
         } catch (err) {
             console.error('Sipariş durumu güncellenirken hata:', err);
         }
@@ -294,7 +365,7 @@ export default function RestaurantPanel() {
         setSuccess('');
 
         try {
-            // menuService yerine menuItemService kullanıyoruz
+
             await menuItemService.createMenuItem(newMenuItem);
             await loadMenuItems();
             setShowAddItemForm(false);
@@ -314,8 +385,7 @@ export default function RestaurantPanel() {
 
     const handleToggleAvailability = async (id) => {
         try {
-            // Bu fonksiyonu menuItemService'e eklemeliyiz, şimdilik silip koşullu yaptım
-            // await menuService.toggleAvailability(id);
+
             const item = menuItems.find(item => item.id === id);
             if (item) {
                 const updatedItem = { ...item, isAvailable: !item.isAvailable };
@@ -332,7 +402,7 @@ export default function RestaurantPanel() {
     const handleDeleteMenuItem = async (id) => {
         if (window.confirm('Bu menü öğesini silmek istediğinizden emin misiniz?')) {
             try {
-                // menuService yerine menuItemService kullanıyoruz
+
                 await menuItemService.deleteMenuItem(id, user?.restaurantId);
                 await loadMenuItems();
                 setSuccess('Menü öğesi başarıyla silindi');
@@ -347,10 +417,10 @@ export default function RestaurantPanel() {
         e.preventDefault();
         try {
             if (editingItem) {
-                // menuService yerine menuItemService kullanıyoruz
+
                 await menuItemService.updateMenuItem(editingItem.id, formData);
             } else {
-                // menuService yerine menuItemService kullanıyoruz
+
                 await menuItemService.createMenuItem(formData);
             }
             setFormData({ name: '', description: '', price: '', image: '', category: '' });
@@ -394,7 +464,7 @@ export default function RestaurantPanel() {
         console.log("MENÜ ÖĞESİ DETAYLARI:");
         console.log("-------------------------");
 
-        // Siparişlerin geçerli olup olmadığını kontrol et
+
         if (!Array.isArray(orders)) {
             console.warn("Sipariş verisi dizi değil, boş dizi kullanılıyor");
             setDashboardStats({
@@ -406,10 +476,10 @@ export default function RestaurantPanel() {
             return;
         }
 
-        // Menü öğelerinin geçerli olup olmadığını kontrol et
+
         if (!Array.isArray(menuItems)) {
             console.warn("Menü öğeleri verisi dizi değil, boş dizi kullanılıyor");
-            // Menü öğeleri array değilse, boş array olarak ayarla
+
             setMenuItems([]);
         } else {
             console.log(`Dashboard - Menü öğeleri sayısı: ${menuItems.length}`);
@@ -427,7 +497,7 @@ export default function RestaurantPanel() {
             }
         }
 
-        // localStorage'dan menü öğeleri bilgisini direkt kontrol et
+
         try {
             if (typeof window !== 'undefined') {
                 const rawStoredItems = localStorage.getItem('menuItems');
@@ -448,17 +518,17 @@ export default function RestaurantPanel() {
 
         console.log("-------------------------");
 
-        // Aktif siparişleri hesapla
+
         const activeOrders = orders.filter(order =>
             order.status === 'pending' || order.status === 'preparing' || order.status === 'ready'
         ).length;
 
-        // Tamamlanan siparişleri hesapla
+
         const completedOrders = orders.filter(order =>
             order.status === 'delivered'
         ).length;
 
-        // Günlük geliri hesapla
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -470,7 +540,7 @@ export default function RestaurantPanel() {
             })
             .reduce((total, order) => total + parseFloat(order.totalAmount || 0), 0);
 
-        // Toplam menü öğesi sayısını hesapla
+
         const totalMenuItems = Array.isArray(menuItems) ? menuItems.length : 0;
 
         console.log("Dashboard istatistikleri:");
@@ -480,7 +550,7 @@ export default function RestaurantPanel() {
         console.log("- Günlük gelir:", dailyRevenue.toFixed(2), "₺");
         console.log("-------------------------");
 
-        // Dashboard istatistiklerini güncelle
+
         setDashboardStats({
             totalMenuItems,
             activeOrders,
@@ -514,9 +584,22 @@ export default function RestaurantPanel() {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            {isTestMode && (
+                <div className="fixed top-16 inset-x-0 bg-yellow-50 border-b border-yellow-200 text-center py-3 px-4 z-50 shadow-md">
+                    <div className="flex items-center justify-center gap-2">
+                        <svg className="h-6 w-6 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-base font-medium text-yellow-800">
+                            <strong>Test Modu</strong> - API bağlantısı yok, veriler yerel depolamada saklanıyor. Gerçek restoran işlemleri değil.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 pt-36">
                 <div className="px-4 py-6 sm:px-0">
-                    {/* Üst Başlık */}
+
                     <div className="mb-8">
                         <h1 className="text-4xl font-bold text-gray-900">Restaurant Panel</h1>
                         <p className="mt-2 text-lg text-gray-600">Hoş geldiniz, {user?.name}</p>
@@ -527,7 +610,7 @@ export default function RestaurantPanel() {
                             <button
                                 onClick={() => setActiveTab('dashboard')}
                                 className={`${activeTab === 'dashboard'
-                                    ? 'border-pink-500 text-pink-600'
+                                    ? 'border-red-600 text-red-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                             >
@@ -536,7 +619,7 @@ export default function RestaurantPanel() {
                             <button
                                 onClick={() => router.push('/restaurant-panel/menu')}
                                 className={`${activeTab === 'menu'
-                                    ? 'border-pink-500 text-pink-600'
+                                    ? 'border-red-600 text-red-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                             >
@@ -545,7 +628,7 @@ export default function RestaurantPanel() {
                             <button
                                 onClick={() => router.push('/restaurant-panel/orders')}
                                 className={`${activeTab === 'orders'
-                                    ? 'border-pink-500 text-pink-600'
+                                    ? 'border-red-600 text-red-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                             >
@@ -554,7 +637,7 @@ export default function RestaurantPanel() {
                             <button
                                 onClick={() => router.push('/restaurant-panel/settings')}
                                 className={`${activeTab === 'settings'
-                                    ? 'border-pink-500 text-pink-600'
+                                    ? 'border-red-600 text-red-600'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                             >
@@ -563,7 +646,7 @@ export default function RestaurantPanel() {
                         </nav>
                     </div>
 
-                    {/* Dashboard İçeriği */}
+
                     {activeTab === 'dashboard' && (
                         <div className="space-y-6">
                             <div className="flex justify-between items-center">
@@ -588,24 +671,12 @@ export default function RestaurantPanel() {
                                 </button>
                             </div>
 
-                            {error && (
-                                <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-                                    <p>{error}</p>
-                                </div>
-                            )}
-
-                            {success && (
-                                <div className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
-                                    <p>{success}</p>
-                                </div>
-                            )}
-
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {/* Toplam Menü Öğesi */}
+
                                 <div className="bg-white overflow-hidden shadow rounded-lg">
                                     <div className="p-5">
                                         <div className="flex items-center">
-                                            <div className="flex-shrink-0 bg-pink-500 rounded-md p-3">
+                                            <div className="flex-shrink-0 bg-red-600 rounded-md p-3">
                                                 <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                                 </svg>
@@ -626,7 +697,7 @@ export default function RestaurantPanel() {
                                     </div>
                                 </div>
 
-                                {/* Aktif Siparişler */}
+
                                 <div className="bg-white overflow-hidden shadow rounded-lg">
                                     <div className="p-5">
                                         <div className="flex items-center">
@@ -651,7 +722,7 @@ export default function RestaurantPanel() {
                                     </div>
                                 </div>
 
-                                {/* Tamamlanan Siparişler */}
+
                                 <div className="bg-white overflow-hidden shadow rounded-lg">
                                     <div className="p-5">
                                         <div className="flex items-center">
@@ -676,7 +747,7 @@ export default function RestaurantPanel() {
                                     </div>
                                 </div>
 
-                                {/* Günlük Gelir */}
+
                                 <div className="bg-white overflow-hidden shadow rounded-lg">
                                     <div className="p-5">
                                         <div className="flex items-center">
@@ -702,7 +773,7 @@ export default function RestaurantPanel() {
                                 </div>
                             </div>
 
-                            {/* Son Siparişler */}
+
                             <div className="bg-white shadow rounded-lg">
                                 <div className="px-4 py-5 sm:p-6">
                                     <h3 className="text-lg leading-6 font-medium text-gray-900">Son Siparişler</h3>
@@ -760,154 +831,6 @@ export default function RestaurantPanel() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* Menü Yönetimi İçeriği */}
-                    {activeTab === 'menu' && (
-                        <div>
-                            {error && (
-                                <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-                                    <p>{error}</p>
-                                </div>
-                            )}
-                            {success && (
-                                <div className="mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
-                                    <p>{success}</p>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end mb-4">
-                                <button
-                                    onClick={() => setShowAddItemForm(true)}
-                                    className="bg-pink-600 text-white px-4 py-2 rounded-md hover:bg-pink-700"
-                                >
-                                    Yeni Ürün Ekle
-                                </button>
-                            </div>
-
-                            {showAddItemForm && (
-                                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-                                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-lg font-medium">Yeni Menü Öğesi Ekle</h3>
-                                            <button
-                                                onClick={() => setShowAddItemForm(false)}
-                                                className="text-gray-400 hover:text-gray-500"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                        <form onSubmit={handleSubmit} className="space-y-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Ürün Adı
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.name}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Açıklama
-                                                </label>
-                                                <textarea
-                                                    value={formData.description}
-                                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                                                    rows="3"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Fiyat (₺)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={formData.price}
-                                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Kategori
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.category}
-                                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Görsel URL
-                                                </label>
-                                                <input
-                                                    type="url"
-                                                    value={formData.image}
-                                                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                                                />
-                                            </div>
-                                            <div className="flex justify-end space-x-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowAddItemForm(false)}
-                                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                                                >
-                                                    İptal
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700"
-                                                >
-                                                    Kaydet
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {menuItems.map((item) => (
-                                    <div key={item.id} className="bg-white rounded-lg shadow-md p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                                                <p className="text-sm text-gray-500">{item.category}</p>
-                                            </div>
-                                            <p className="text-lg font-bold text-pink-600">{item.price} ₺</p>
-                                        </div>
-                                        <p className="text-gray-600 mb-4">{item.description}</p>
-                                        <div className="flex justify-end">
-                                            <button
-                                                onClick={() => handleDelete(item.id)}
-                                                className="text-red-600 hover:text-red-700"
-                                            >
-                                                Sil
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Ayarlar İçeriği */}
-                    {activeTab === 'settings' && (
-                        <div className="bg-white p-6 rounded-lg shadow">
-                            <h2 className="text-2xl font-semibold mb-4">Ayarlar</h2>
-                            <p className="text-gray-600">Yakında eklenecek...</p>
                         </div>
                     )}
                 </div>

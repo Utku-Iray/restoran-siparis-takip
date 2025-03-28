@@ -89,8 +89,8 @@ export default function ProfilePage() {
                         <button
                             onClick={() => setActiveTab('personal')}
                             className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === 'personal'
-                                    ? 'bg-pink-600 text-white'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-pink-600 text-white'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             Kişisel Bilgiler
@@ -98,8 +98,8 @@ export default function ProfilePage() {
                         <button
                             onClick={() => setActiveTab('addresses')}
                             className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === 'addresses'
-                                    ? 'bg-pink-600 text-white'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-pink-600 text-white'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             Adreslerim

@@ -1,9 +1,52 @@
 import axios from 'axios';
 
 // Backend API URL'i
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-// Bağlantı problemi durumunda daha açıklayıcı log mesajları
+export const fixImageUrl = (url) => {
+    if (!url) return null;
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    if (url.startsWith('data:image/')) {
+        return url;
+    }
+
+    if (url.startsWith('/')) {
+
+        return url;
+    }
+
+    return `/image/${url}`;
+};
+
+export const prepareImageForDB = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    if (imageUrl.startsWith('data:image/')) {
+        return imageUrl;
+    }
+
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+    }
+
+    if (imageUrl.startsWith('/')) {
+        if (imageUrl.startsWith('/image/')) {
+            return imageUrl.substring(1); // /image/sushi.jpg -> image/sushi.jpg
+        }
+        return imageUrl.substring(1);
+    }
+
+    if (imageUrl.startsWith('image/')) {
+        return imageUrl; // Zaten doğru formatsa olduğu gibi bırak
+    }
+
+    return `image/${imageUrl}`;
+};
+
 const logAxiosError = (error) => {
     if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
         console.error(`
@@ -19,14 +62,13 @@ const logAxiosError = (error) => {
         =====================================================
         `);
     } else if (error.response) {
-        // Sunucu cevap döndü, ancak hata kodu döndü
         console.error(`API Hatası: ${error.response.status} - ${error.response.statusText}`);
         console.error('Hata Detayları:', error.response.data);
     } else if (error.request) {
-        // İstek yapıldı, ancak sunucudan hiç cevap gelmedi
+
         console.error('Sunucudan cevap alınamadı');
     } else {
-        // İstek yapılırken bir şeyler ters gitti
+
         console.error('Axios Error:', error.message);
     }
     return error;
@@ -38,23 +80,18 @@ const axiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    // Zaman aşımı süresini azaltarak bağlantı problemlerinde daha hızlı hata vermesini sağlayalım
+
     timeout: 5000, // 5 saniye
 });
 
-// İstek öncesi interceptor
 axiosInstance.interceptors.request.use(
     (config) => {
-        // Token ekle
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
 
-        // menu-items endpoint'ini menu_item endpoint'ine çevir
-        if (config.url && config.url.includes('menu-items')) {
-            config.url = config.url.replace('menu-items', 'menu_item');
-            console.log(`URL düzeltildi: ${config.url}`);
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
 
         return config;
@@ -69,13 +106,27 @@ axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/auth/login';
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                console.error('Kimlik doğrulama hatası: 401 Yetkisiz erişim');
+
+            }
         }
 
         logAxiosError(error);
         return Promise.reject(error);
     }
 );
+
+export const checkApiHealth = async () => {
+    try {
+
+        const response = await axiosInstance.get('/health', { timeout: 5000 });
+        return response.status === 200;
+    } catch (error) {
+        console.warn('API sağlık kontrolü başarısız:', error.message);
+        return false;
+    }
+};
 
 export default axiosInstance; 

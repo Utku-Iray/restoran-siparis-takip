@@ -1,10 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Restaurant } from '../../restaurants/entities/restaurant.entity';
+import { User } from '../../users/user.entity';
 
 @Entity('menu_items')
 export class MenuItem {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+    @PrimaryGeneratedColumn()
+    id: number;
 
     @Column()
     name: string;
@@ -24,11 +24,11 @@ export class MenuItem {
     @Column({ nullable: true })
     imageUrl: string;
 
-    @ManyToOne(() => Restaurant, restaurant => restaurant.menuItems)
-    restaurant: Restaurant;
+    @ManyToOne(() => User, user => user.menuItems)
+    restaurant: User;
 
     @Column()
-    restaurantId: string;
+    restaurantId: number;
 
     @CreateDateColumn()
     createdAt: Date;

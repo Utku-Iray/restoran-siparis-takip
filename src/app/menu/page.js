@@ -30,12 +30,10 @@ export default function MenuPage() {
             setLoading(true);
             console.log("Müşteri menü sayfasında tüm menü öğeleri yükleniyor...");
 
-            // menuItemService ile tüm menü öğelerini al
             const items = await menuItemService.getAllMenuItems();
             console.log(`Toplam ${items.length} menü öğesi yüklendi`);
             setMenuItems(items);
 
-            // Restoran bilgilerini localStorage'a kaydet
             if (items.length > 0) {
                 const restaurantId = items[0].restaurantId;
                 const restaurantName = items[0].restaurantName || 'Restoran';

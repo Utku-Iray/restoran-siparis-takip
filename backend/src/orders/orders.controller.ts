@@ -9,19 +9,19 @@ import { OrderStatus } from './order.entity';
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) { }
 
   @Post()
   @Roles(UserRole.CUSTOMER)
   async createOrder(@Body() createOrderDto: any, @Request() req) {
     const restaurantId = createOrderDto.restaurantId;
-    
+
     if (!restaurantId) {
       throw new Error('restaurantId field is required');
     }
-    
+
     console.log(`Creating order for restaurant ID: ${restaurantId}`);
-    
+
     return this.ordersService.createOrder(createOrderDto, restaurantId);
   }
 
@@ -29,6 +29,12 @@ export class OrdersController {
   @Roles(UserRole.RESTAURANT)
   async getRestaurantOrders(@Request() req) {
     return this.ordersService.getRestaurantOrders(req.user.id);
+  }
+
+  @Get('user/:id')
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  async getUserOrders(@Param('id') id: string) {
+    return this.ordersService.getUserOrders(parseInt(id));
   }
 
   @Put(':id/status')

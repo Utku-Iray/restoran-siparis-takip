@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, ParseIntPipe } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -8,8 +8,8 @@ import { UserRole } from '../auth/enums/user-role.enum';
 
 interface RequestWithUser extends Request {
     user: {
-        id: string;
-        restaurantId: string;
+        id: number;
+        restaurantId: number;
     }
 }
 
@@ -17,7 +17,7 @@ interface RequestWithUser extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.RESTAURANT)
 export class RestaurantsController {
-    constructor(private readonly restaurantsService: RestaurantsService) {}
+    constructor(private readonly restaurantsService: RestaurantsService) { }
 
     @Post()
     create(@Body() createRestaurantDto: CreateRestaurantDto, @Request() req: RequestWithUser) {
@@ -36,7 +36,7 @@ export class RestaurantsController {
 
     @Delete(':id')
     @Roles(UserRole.ADMIN)
-    remove(@Param('id') id: string) {
+    remove(@Param('id', ParseIntPipe) id: number) {
         return this.restaurantsService.remove(id);
     }
 }

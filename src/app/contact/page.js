@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-// Örnek SSS verileri - Backend entegrasyonunda değiştirilecek
+
 const FAQ_ITEMS = [
     {
         question: "Sipariş verdikten sonra ne kadar sürede gelir?",
@@ -35,7 +35,7 @@ export default function ContactPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Backend entegrasyonunda form gönderilecek
+
         console.log('Form gönderildi:', formData);
         setSubmitStatus('success');
         setFormData({
@@ -49,16 +49,16 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12">
+        <div className="min-h-screen bg-gray-50 py-12 pt-32">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Başlık */}
+
                 <div className="text-center mb-12">
                     <h1 className="text-3xl font-bold text-gray-900">İletişim ve Destek</h1>
                     <p className="mt-4 text-lg text-gray-600">Size nasıl yardımcı olabiliriz?</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    {/* İletişim Formu */}
+
                     <div>
                         <div className="bg-white rounded-lg shadow p-6">
                             <h2 className="text-xl font-semibold text-gray-900 mb-6">Bize Ulaşın</h2>
@@ -172,10 +172,10 @@ export default function ContactPage() {
                                 <h3 className="text-lg font-medium text-gray-900 mb-4">Diğer İletişim Kanalları</h3>
                                 <div className="space-y-3">
                                     <p className="text-gray-600">
-                                        <span className="font-medium">Telefon:</span> 0850 123 45 67
+                                        <span className="font-medium">Telefon:</span> (553) 566 92 71
                                     </p>
                                     <p className="text-gray-600">
-                                        <span className="font-medium">E-posta:</span> destek@restoransiparis.com
+                                        <span className="font-medium">E-posta:</span> destek@rslezzet.com
                                     </p>
                                     <p className="text-gray-600">
                                         <span className="font-medium">Çalışma Saatleri:</span> Her gün 09:00 - 24:00

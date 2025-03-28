@@ -14,7 +14,11 @@ export class CreateMenuItemDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  imageUrl: string = '/image/default-food.jpg';
+
   @IsBoolean()
   @IsOptional()
   isAvailable?: boolean;
-} 
+}
